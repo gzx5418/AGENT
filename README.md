@@ -6,6 +6,10 @@
 
 ```
 法律agent/
+├── src/                            # Python 源码
+│   ├── legal_search.py             # 法律检索核心
+│   ├── legal_cli.py                # 命令行工具
+│   └── legal_assistant.py          # 对话式助手
 ├── mcp-servers/                    # MCP服务目录
 │   ├── delilegal-api/              # 得理法律API服务
 │   │   ├── server.py               # 主服务（法规+案例检索）
@@ -16,15 +20,14 @@
 │   │   ├── templates/              # 文书模板
 │   │   └── requirements.txt
 │   └── start.sh                    # 启动脚本
+├── web/                            # Web 界面
+│   └── legal-ai-chat.html          # 聊天界面
 ├── skills/
 │   └── legal-expert/
 │       └── SKILL.md                # 法律专家Skill定义
-├── poco-claw-main/                 # Poco框架（已存在）
-├── Laws-master/                    # 本地法律数据库（可选）
 ├── Dockerfile.mcp                  # MCP服务Docker镜像
 ├── setup.sh                        # 快速部署脚本
 ├── claude_desktop_config.json      # Claude Desktop配置
-├── POCO_INTEGRATION.md             # Poco集成指南
 └── README.md
 ```
 
@@ -101,11 +104,7 @@ DELILEGAL_SECRET=你的secret
 
 4. **重启Claude Desktop**
 
-### 方式二：集成到Poco框架
-
-详见 [POCO_INTEGRATION.md](POCO_INTEGRATION.md)
-
-### 方式三：直接运行MCP服务
+### 方式二：直接运行MCP服务
 
 ```bash
 cd mcp-servers/delilegal-api
@@ -205,11 +204,14 @@ curl -X POST 'https://openapi.delilegal.com/api/qa/v3/search/queryListCase' \
 
 | 文件 | 用途 |
 |------|------|
+| `src/legal_search.py` | 法律检索核心模块 |
+| `src/legal_cli.py` | 命令行工具 |
+| `src/legal_assistant.py` | 对话式助手 |
 | `mcp-servers/delilegal-api/server.py` | 得理法律MCP服务 |
 | `mcp-servers/doc-tools/server.py` | 文档处理MCP服务 |
 | `skills/legal-expert/SKILL.md` | 法律专家Skill |
+| `web/legal-ai-chat.html` | Web聊天界面 |
 | `claude_desktop_config.json` | Claude Desktop配置 |
-| `POCO_INTEGRATION.md` | Poco集成指南 |
 | `setup.sh` | 快速部署脚本 |
 
 ## 免责声明

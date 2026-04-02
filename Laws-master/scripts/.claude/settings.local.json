@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(//c/Users/32212/Desktop/法律agent/Laws-master/**)",
-      "Bash(python scripts/database.py update db.sqlite3)"
-    ]
-  }
-}
