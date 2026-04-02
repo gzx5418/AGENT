@@ -1,0 +1,27 @@
+民事起诉状模板
+
+原告：{plaintiff_name}
+身份证号：{plaintiff_id}
+住所地：{plaintiff_address}
+联系电话：{plaintiff_phone}
+
+被告：{defendant_name}
+住所地：{defendant_address}
+
+案由：{cause}
+
+诉讼请求：
+{claims}
+
+事实与理由：
+{facts}
+
+证据清单：
+{evidence}
+
+此致
+        人民法院
+
+                                    起诉人：
+
+                                    年    月    日

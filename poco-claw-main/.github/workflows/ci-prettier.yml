@@ -1,0 +1,33 @@
+name: CI Prettier
+
+on:
+  pull_request:
+    paths-ignore:
+      - backend/assets/**
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - backend/assets/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Prettier
+        run: npm install -g prettier
+
+      - name: Run Prettier Check
+        run: prettier --check . --ignore-unknown

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "delilegal-api": {
+      "command": "python",
+      "args": ["c:/Users/32212/Desktop/法律agent/mcp-servers/delilegal-api/server.py"],
+      "env": {}
+    },
+    "doc-tools": {
+      "command": "python",
+      "args": ["c:/Users/32212/Desktop/法律agent/mcp-servers/doc-tools/server.py"],
+      "env": {}
+    }
+  }
+}

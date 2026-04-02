@@ -1,0 +1,24 @@
+民事答辩状模板
+
+答辩人：{defendant_name}
+住所地：{defendant_address}
+
+被答辩人（原告）：{plaintiff_name}
+
+案号：{case_number}
+
+答辩人因与被答辩人        纠纷一案，现提出答辩意见如下：
+
+{defense_points}
+
+事实与理由：
+{facts}
+
+综上所述，答辩人认为：
+
+此致
+        人民法院
+
+                                    答辩人：
+
+                                    年    月    日

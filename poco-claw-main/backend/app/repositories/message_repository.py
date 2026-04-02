@@ -1,0 +1,103 @@
+import uuid
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.models.agent_message import AgentMessage
+
+
+class MessageRepository:
+    """Data access layer for messages."""
+
+    @staticmethod
+    def create(
+        session_db: Session,
+        session_id: uuid.UUID,
+        role: str,
+        content: dict[str, Any],
+        text_preview: str | None = None,
+    ) -> AgentMessage:
+        """Creates a new message."""
+        message = AgentMessage(
+            session_id=session_id,
+            role=role,
+            content=content,
+            text_preview=text_preview,
+        )
+        session_db.add(message)
+        return message
+
+    @staticmethod
+    def get_by_id(session_db: Session, message_id: int) -> AgentMessage | None:
+        """Gets a message by ID."""
+        return (
+            session_db.query(AgentMessage).filter(AgentMessage.id == message_id).first()
+        )
+
+    @staticmethod
+    def get_latest_by_session(
+        session_db: Session, session_id: uuid.UUID
+    ) -> AgentMessage | None:
+        """Gets the latest message for a session."""
+        return (
+            session_db.query(AgentMessage)
+            .filter(AgentMessage.session_id == session_id)
+            .order_by(AgentMessage.id.desc())
+            .first()
+        )
+
+    @staticmethod
+    def list_by_session(
+        session_db: Session, session_id: uuid.UUID, limit: int = 100, offset: int = 0
+    ) -> list[AgentMessage]:
+        """Lists messages for a session."""
+        return (
+            session_db.query(AgentMessage)
+            .filter(AgentMessage.session_id == session_id)
+            .order_by(AgentMessage.created_at.asc(), AgentMessage.id.asc())
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+
+    @staticmethod
+    def list_by_session_after_id(
+        session_db: Session,
+        session_id: uuid.UUID,
+        *,
+        after_id: int = 0,
+        limit: int = 100,
+    ) -> list[AgentMessage]:
+        """Lists messages for a session using an incremental ID cursor."""
+        query = session_db.query(AgentMessage).filter(
+            AgentMessage.session_id == session_id
+        )
+        if after_id > 0:
+            query = query.filter(AgentMessage.id > after_id)
+        return query.order_by(AgentMessage.id.asc()).limit(limit).all()
+
+    @staticmethod
+    def list_ids_by_session_after_id(
+        session_db: Session,
+        session_id: uuid.UUID,
+        *,
+        after_id: int = 0,
+        limit: int = 100,
+    ) -> list[int]:
+        """Lists message ids for a session using an incremental ID cursor."""
+        query = session_db.query(AgentMessage.id).filter(
+            AgentMessage.session_id == session_id
+        )
+        if after_id > 0:
+            query = query.filter(AgentMessage.id > after_id)
+        rows = query.order_by(AgentMessage.id.asc()).limit(limit).all()
+        return [row[0] for row in rows]
+
+    @staticmethod
+    def count_by_session(session_db: Session, session_id: uuid.UUID) -> int:
+        """Counts messages for a session."""
+        return (
+            session_db.query(AgentMessage)
+            .filter(AgentMessage.session_id == session_id)
+            .count()
+        )

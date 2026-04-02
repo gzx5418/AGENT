@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>法律AI专家 - 测试版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a56db;
+            --primary-dark: #1e40af;
+            --bg: #f8fafc;
+            --bg-dark: #1e293b;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --card: #ffffff;
+            --success: #059669;
+            --warning: #d97706;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+            height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .config-section {
+            margin-top: 12px;
+        }
+
+        .config-title {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .config-item {
+            margin-bottom: 12px;
+        }
+
+        .config-item label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .config-item input, .config-item select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        .config-item input:focus, .config-item select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.success {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .status-badge.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* 主聊天区 */
+        .main {
+            display: flex;
+            flex-direction: column;
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        /* 消息区 */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .message-header {
+            font-size: 11px;
+            margin-bottom: 6px;
+            opacity: 0.7;
+        }
+
+        .message-content {
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+
+        .message-content pre {
+            background: var(--bg-dark);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin: 8px 0;
+        }
+
+        .message-content code {
+            background: var(--bg-dark);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* 搜索结果卡片 */
+        .search-results {
+            margin-top: 12px;
+            border-top: 1px dashed var(--border);
+            padding-top: 12px;
+        }
+
+        .search-result-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .search-result-item:hover {
+            border-color: var(--primary);
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .search-result-meta {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+
+        /* 输入区 */
+        .chat-input {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-tools {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover, .tool-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            resize: none;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 加载动画 */
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+
+        .typing span {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .sidebar {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">法</div>
+                <div class="logo-text">法律AI专家</div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-title">API配置状态</div>
+                <div id="apiStatus" class="status-badge success">
+                    <span class="status-dot"></span>
+                    已连接
+                </div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-title">智谱AI配置</div>
+                <div class="config-item">
+                    <label>API Key</label>
+                    <input type="password" id="zhipuKey" placeholder="智谱API Key" value="">
+                </div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-title">得理法律API</div>
+                <div class="config-item">
+                    <label>AppID</label>
+                    <input type="text" id="delilegalAppid" value="QthdBErlyaYvyXul">
+                </div>
+                <div class="config-item">
+                    <label>Secret</label>
+                    <input type="password" id="delilegalSecret" value="EC5D455E6BD348CE8E18BE05926D2EBE">
+                </div>
+            </div>
+
+            <div style="margin-top: auto;">
+                <button class="btn btn-secondary" style="width: 100%;" onclick="clearChat()">
+                    清空对话
+                </button>
+            </div>
+        </div>
+
+        <!-- 主聊天区 -->
+        <div class="main">
+            <div class="chat-header">
+                <div class="chat-title">💬 法律咨询对话</div>
+                <div class="chat-actions">
+                    <button class="btn btn-secondary" onclick="testLawSearch()">测试法规检索</button>
+                    <button class="btn btn-secondary" onclick="testCaseSearch()">测试案例检索</button>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message assistant">
+                    <div class="message-header">法律AI专家</div>
+                    <div class="message-content">
+                        您好！我是法律AI专家，可以为您提供：
+
+                        📚 <b>法规检索</b> - 搜索法律法规条款
+                        📋 <b>案例检索</b> - 搜索相关司法案例
+                        📝 <b>法律咨询</b> - 解答法律问题
+
+                        请问有什么可以帮您的？
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input">
+                <div class="input-wrapper">
+                    <div class="input-tools">
+                        <button class="tool-btn active" onclick="setMode('chat')" id="modeChat">💬 对话</button>
+                        <button class="tool-btn" onclick="setMode('law')" id="modeLaw">📚 法规检索</button>
+                        <button class="tool-btn" onclick="setMode('case')" id="modeCase">📋 案例检索</button>
+                    </div>
+                    <textarea id="userInput" rows="3" placeholder="输入您的法律问题..." onkeydown="handleKeyDown(event)"></textarea>
+                </div>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const CONFIG = {
+            zhipu: {
+                baseUrl: 'https://open.bigmodel.cn/api/anthropic',
+                apiKey: ''
+            },
+            delilegal: {
+                baseUrl: 'https://openapi.delilegal.com/api/qa/v3/search',
+                appid: 'QthdBErlyaYvyXul',
+                secret: 'EC5D455E6BD348CE8E18BE05926D2EBE'
+            }
+        };
+
+        let currentMode = 'chat';
+        let isLoading = false;
+
+        // 设置模式
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+
+            const placeholders = {
+                chat: '输入您的法律问题...',
+                law: '输入法规搜索关键词，如"合同法 违约"',
+                case: '输入案例搜索关键词，如"工伤 赔偿"'
+            };
+            document.getElementById('userInput').placeholder = placeholders[mode];
+        }
+
+        // 添加消息
+        function addMessage(role, content, extra = null) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            let html = `<div class="message-header">${role === 'user' ? '您' : '法律AI专家'}</div>`;
+            html += `<div class="message-content">${formatContent(content)}</div>`;
+
+            if (extra) {
+                html += `<div class="search-results">${extra}</div>`;
+            }
+
+            messageDiv.innerHTML = html;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            return messageDiv;
+        }
+
+        // 格式化内容
+        function formatContent(content) {
+            return content
+                .replace(/\n/g, '<br>')
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre>$2</pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+
+        // 添加加载动画
+        function addTypingIndicator() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message assistant typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            messagesDiv.appendChild(typingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // 移除加载动画
+        function removeTypingIndicator() {
+            const typingDiv = document.getElementById('typingIndicator');
+            if (typingDiv) typingDiv.remove();
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message || isLoading) return;
+
+            isLoading = true;
+            document.getElementById('sendBtn').disabled = true;
+            input.value = '';
+
+            addMessage('user', message);
+            addTypingIndicator();
+
+            try {
+                let response;
+                if (currentMode === 'chat') {
+                    response = await sendChatMessage(message);
+                } else if (currentMode === 'law') {
+                    response = await searchLaw(message);
+                } else if (currentMode === 'case') {
+                    response = await searchCase(message);
+                }
+
+                removeTypingIndicator();
+                addMessage('assistant', response.content, response.extra);
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('assistant', `❌ 错误: ${error.message}`);
+            }
+
+            isLoading = false;
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        // 发送聊天消息
+        async function sendChatMessage(message) {
+            const apiKey = document.getElementById('zhipuKey').value || CONFIG.zhipu.apiKey;
+
+            if (!apiKey) {
+                throw new Error('请先配置智谱API Key');
+            }
+
+            const response = await fetch(`${CONFIG.zhipu.baseUrl}/v1/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'glm-5',
+                    max_tokens: 2048,
+                    messages: [{
+                        role: 'user',
+                        content: `你是一位专业的法律顾问。请回答以下法律问题：\n\n${message}`
+                    }]
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`API错误: ${error}`);
+            }
+
+            const data = await response.json();
+            const content = data.content[0].text;
+
+            return { content };
+        }
+
+        // 法规检索
+        async function searchLaw(query) {
+            const keywords = query.split(/\s+/).filter(k => k);
+
+            const response = await fetch(`${CONFIG.delilegal.baseUrl}/queryListLaw`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'appid': document.getElementById('delilegalAppid').value,
+                    'secret': document.getElementById('delilegalSecret').value
+                },
+                body: JSON.stringify({
+                    pageNo: 1,
+                    pageSize: 5,
+                    sortField: 'correlation',
+                    sortOrder: 'desc',
+                    condition: {
+                        timeLinessTypeArr: ['5'],
+                        publishYearStart: '1978-01-01',
+                        publishYearEnd: '2026-01-01',
+                        activeYearStart: '1978-01-01',
+                        activeYearEnd: '2026-01-01',
+                        keywords: keywords,
+                        fieldName: 'semantic'
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.msg || '检索失败');
+            }
+
+            let content = `📚 找到 ${data.body.totalCount} 条相关法规：\n`;
+            let extra = '';
+
+            data.body.data.forEach((item, i) => {
+                extra += `
+                    <div class="search-result-item">
+                        <div class="search-result-title">${i + 1}. ${item.title}</div>
+                        <div class="search-result-meta">
+                            ${item.levelName || ''} | ${item.timelinessName || ''} | ${item.publishDate || ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            return { content, extra };
+        }
+
+        // 案例检索
+        async function searchCase(query) {
+            const keywords = query.split(/\s+/).filter(k => k);
+
+            const response = await fetch(`${CONFIG.delilegal.baseUrl}/queryListCase`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'appid': document.getElementById('delilegalAppid').value,
+                    'secret': document.getElementById('delilegalSecret').value
+                },
+                body: JSON.stringify({
+                    pageNo: 1,
+                    pageSize: 5,
+                    sortField: 'correlation',
+                    sortOrder: 'desc',
+                    condition: {
+                        timeLinessTypeArr: ['5'],
+                        publishYearStart: '1978-01-01',
+                        publishYearEnd: '2026-01-01',
+                        activeYearStart: '1978-01-01',
+                        activeYearEnd: '2026-01-01',
+                        keywordArr: keywords
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.msg || '检索失败');
+            }
+
+            let content = `📋 找到 ${data.body.totalCount} 条相关案例：\n`;
+            let extra = '';
+
+            data.body.data.forEach((item, i) => {
+                extra += `
+                    <div class="search-result-item">
+                        <div class="search-result-title">${i + 1}. ${item.title || item.caseName}</div>
+                        <div class="search-result-meta">
+                            ${item.courtName || ''} | ${item.judgeDate || ''} | ${item.caseType || ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            return { content, extra };
+        }
+
+        // 测试法规检索
+        async function testLawSearch() {
+            setMode('law');
+            document.getElementById('userInput').value = '民法典 合同';
+            await sendMessage();
+        }
+
+        // 测试案例检索
+        async function testCaseSearch() {
+            setMode('case');
+            document.getElementById('userInput').value = '工伤 赔偿';
+            await sendMessage();
+        }
+
+        // 清空对话
+        function clearChat() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML = `
+                <div class="message assistant">
+                    <div class="message-header">法律AI专家</div>
+                    <div class="message-content">
+                        对话已清空。请问有什么可以帮您的？
+                    </div>
+                </div>
+            `;
+        }
+
+        // 键盘事件
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>

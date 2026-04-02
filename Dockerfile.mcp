@@ -1,0 +1,20 @@
+# 法律MCP服务 Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# 安装依赖
+RUN pip install --no-cache-dir mcp httpx
+
+# 复制得理法律API服务
+COPY delilegal-api/ /app/delilegal-api/
+
+# 复制文档处理服务
+COPY doc-tools/ /app/doc-tools/
+
+# 复制启动脚本
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# 默认启动得理法律API服务
+CMD ["python", "/app/delilegal-api/server.py"]
