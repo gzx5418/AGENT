@@ -71,10 +71,26 @@ pip install mcp httpx
 
 2. **配置API密钥**
 
-编辑 `mcp-servers/delilegal-api/config.py`：
-```python
-APPID = "你的appid"
-SECRET = "你的secret"
+设置环境变量（推荐）：
+
+```bash
+# Linux/macOS
+export DELILEGAL_APPID="你的appid"
+export DELILEGAL_SECRET="你的secret"
+
+# Windows (PowerShell)
+$env:DELILEGAL_APPID="你的appid"
+$env:DELILEGAL_SECRET="你的secret"
+
+# Windows (CMD)
+set DELILEGAL_APPID=你的appid
+set DELILEGAL_SECRET=你的secret
+```
+
+或者在 `.env` 文件中配置：
+```
+DELILEGAL_APPID=你的appid
+DELILEGAL_SECRET=你的secret
 ```
 
 3. **配置Claude Desktop**

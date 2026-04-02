@@ -51,6 +51,10 @@ logs/
 *.temp
 search_result.txt
 
+# API密钥配置（敏感）
+config.local.py
+*.local.json
+
 # 系统文件
 .DS_Store
 Thumbs.db

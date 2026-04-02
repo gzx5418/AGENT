@@ -10,38 +10,45 @@ import json
 from typing import Optional
 import os
 
-# API配置
+# API配置 - 从环境变量读取
 DELILEGAL_BASE_URL = "https://openapi.delilegal.com/api/qa/v3/search"
-APPID = "QthdBErlyaYvyXul"
-SECRET = "EC5D455E6BD348CE8E18BE05926D2EBE"
+APPID = os.environ.get("DELILEGAL_APPID", "")
+SECRET = os.environ.get("DELILEGAL_SECRET", "")
+
+if not APPID or not SECRET:
+    print("警告: 请设置环境变量 DELILEGAL_APPID 和 DELILEGAL_SECRET")
 
 # 创建MCP服务器
 server = Server("delilegal-api")
 
 
-async def call_delilegal_api(endpoint: str, condition: dict, page_no: int = 1
-page_size: int = 5
-sort_field: str = "correlation"
-sort_order: str = "desc") -> dict:
+async def call_delilegal_api(
+    endpoint: str,
+    condition: dict,
+    page_no: int = 1,
+    page_size: int = 5,
+    sort_field: str = "correlation",
+    sort_order: str = "desc"
+) -> dict:
     """调用得理法律API"""
     headers = {
-        "Content-Type": "application/json"
-        "appid": APPID
+        "Content-Type": "application/json",
+        "appid": APPID,
         "secret": SECRET
     }
 
     payload = {
-        "pageNo": page_no
-        "pageSize": page_size
-        "sortField": sort_field
-        "sortOrder": sort_order
+        "pageNo": page_no,
+        "pageSize": page_size,
+        "sortField": sort_field,
+        "sortOrder": sort_order,
         "condition": condition
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
-            f"{DELILEGAL_BASE_URL}/{endpoint}"
-            headers=headers
+            f"{DELILEGAL_BASE_URL}/{endpoint}",
+            headers=headers,
             json=payload
         )
         return response.json()
@@ -52,7 +59,7 @@ async def list_tools() -> list[Tool]:
     """列出所有可用工具"""
     return [
         Tool(
-            name="search_law"
+            name="search_law",
             description="""搜索法律法规条款。
 
 参数：
@@ -63,14 +70,14 @@ async def list_tools() -> list[Tool]:
 - search_law(query="民法典 合同")
 """,
             inputSchema={
-                "type": "object"
+                "type": "object",
                 "properties": {
                     "query": {
-                        "type": "string"
+                        "type": "string",
                         "description": "搜索关键词"
                     },
                     "page_size": {
-                        "type": "integer"
+                        "type": "integer",
                         "default": 5
                     }
                 },
@@ -78,7 +85,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="search_case"
+            name="search_case",
             description="""搜索司法案例。
 
 参数：
@@ -91,25 +98,25 @@ async def list_tools() -> list[Tool]:
 - search_case(keywords=["工伤", "赔偿"])
 """,
             inputSchema={
-                "type": "object"
+                "type": "object",
                 "properties": {
                     "keywords": {
-                        "type": "array"
-                        "items": {"type": "string"}
+                        "type": "array",
+                        "items": {"type": "string"},
                         "description": "关键词数组"
                     },
                     "court_levels": {
-                        "type": "array"
-                        "items": {"type": "string", "enum": ["0", "1", "2", "3"]}
+                        "type": "array",
+                        "items": {"type": "string", "enum": ["0", "1", "2", "3"]},
                         "description": "法院层级：0=最高,1=高级,2=中级,3=基层"
                     },
                     "judgement_types": {
-                        "type": "array"
-                        "items": {"type": "string"}
+                        "type": "array",
+                        "items": {"type": "string"},
                         "description": "文书类型：30=判决书,31=裁决书,32=调解书"
                     },
                     "page_size": {
-                        "type": "integer"
+                        "type": "integer",
                         "default": 5
                     }
                 },
@@ -120,31 +127,30 @@ async def list_tools() -> list[Tool]:
 
 
 @server.call_tool()
-async def call_tool(name: str
- arguments: dict) -> list[TextContent]:
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """执行工具调用"""
     if name == "search_law":
         query = arguments.get("query", "")
         page_size = arguments.get("page_size", 5)
 
         condition = {
-            "timeLinessTypeArr": ["5"]
-            "publishYearStart": "1978-01-01"
-            "publishYearEnd": "2026-01-01"
-            "activeYearStart": "1978-01-01"
-            "activeYearEnd": "2026-01-01"
-            "keywords": [query]
+            "timeLinessTypeArr": ["5"],
+            "publishYearStart": "1978-01-01",
+            "publishYearEnd": "2026-01-01",
+            "activeYearStart": "1978-01-01",
+            "activeYearEnd": "2026-01-01",
+            "keywords": [query],
             "fieldName": "semantic"
         }
 
         result = await call_delilegal_api(
-            "queryListLaw"
-            condition
+            "queryListLaw",
+            condition,
             page_size=page_size
         )
 
         return [TextContent(
-            type="text"
+            type="text",
             text=json.dumps(result, ensure_ascii=False, indent=2)
         )]
 
@@ -155,11 +161,11 @@ async def call_tool(name: str
         page_size = arguments.get("page_size", 5)
 
         condition = {
-            "timeLinessTypeArr": ["5"]
-            "publishYearStart": "1978-01-01"
-            "publishYearEnd": "2026-01-01"
-            "activeYearStart": "1978-01-01"
-            "activeYearEnd": "2026-01-01"
+            "timeLinessTypeArr": ["5"],
+            "publishYearStart": "1978-01-01",
+            "publishYearEnd": "2026-01-01",
+            "activeYearStart": "1978-01-01",
+            "activeYearEnd": "2026-01-01",
             "keywordArr": keywords
         }
 
@@ -169,19 +175,19 @@ async def call_tool(name: str
             condition["judgementTypeArr"] = judgement_types
 
         result = await call_delilegal_api(
-            "queryListCase"
-            condition
+            "queryListCase",
+            condition,
             page_size=page_size
         )
 
         return [TextContent(
-            type="text"
+            type="text",
             text=json.dumps(result, ensure_ascii=False, indent=2)
         )]
 
     else:
         return [TextContent(
-            type="text"
+            type="text",
             text=f"未知工具: {name}"
         )]
 
