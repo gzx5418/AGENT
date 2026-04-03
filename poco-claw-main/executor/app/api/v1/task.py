@@ -38,6 +38,20 @@ def _build_task_context_env(
     }
 
 
+def _resolve_task_context_path(workspace_root: Path) -> Path:
+    """Pick a writable location for the transient task context file."""
+    primary = workspace_root / ".poco-task-context.json"
+    primary.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        primary.write_text("{}", encoding="utf-8")
+        primary.unlink(missing_ok=True)
+        return primary
+    except OSError:
+        fallback = Path("/tmp") / ".poco-task-context.json"
+        fallback.parent.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
 @router.post("/execute")
 async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
     """Execute an agent task in the background.
@@ -98,8 +112,7 @@ async def run_task(req: TaskRun, background_tasks: BackgroundTasks) -> dict:
     )
 
     async def execute_with_task_context() -> None:
-        task_context_path = executor.workspace.root_path / ".poco-task-context.json"
-        task_context_path.parent.mkdir(parents=True, exist_ok=True)
+        task_context_path = _resolve_task_context_path(executor.workspace.root_path)
         callback_base_url = req.callback_base_url or base_url
         task_context_path.write_text(
             json.dumps(
