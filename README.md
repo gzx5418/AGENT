@@ -1,223 +1,220 @@
 # 智能法律AI专家系统
 
-基于 MCP (Model Context Protocol) 的智能法律AI专家系统，集成得理法律API，提供法规检索、案例检索和文档处理能力。
+基于 **poco-claw** 框架的真正法律智能体，具备任务规划、多工具协作、记忆系统等 Agent 能力。
 
-## 项目结构
+## 🎯 项目特点
+
+| 特性 | 说明 |
+|------|------|
+| 🧠 **智能规划** | 自动分解复杂法律任务 |
+| 🔧 **多工具协作** | 法规检索 + 案例检索 + AI 分析 |
+| 💾 **记忆系统** | 记住用户偏好和历史对话 |
+| 🔄 **自主执行** | 循环执行直到任务完成 |
+| 🌐 **Web 界面** | 统一对话模式，自动检索整合 |
+
+## 📁 项目结构
 
 ```
 法律agent/
-├── src/                            # Python 源码
-│   ├── legal_search.py             # 法律检索核心
-│   ├── legal_cli.py                # 命令行工具
-│   └── legal_assistant.py          # 对话式助手
-├── mcp-servers/                    # MCP服务目录
-│   ├── delilegal-api/              # 得理法律API服务
-│   │   ├── server.py               # 主服务（法规+案例检索）
-│   │   ├── config.py               # API配置
-│   │   └── requirements.txt
-│   ├── doc-tools/                  # 文档处理服务
-│   │   ├── server.py               # 主服务（合同审查+文书生成）
-│   │   ├── templates/              # 文书模板
-│   │   └── requirements.txt
-│   └── start.sh                    # 启动脚本
-├── web/                            # Web 界面
-│   └── legal-ai-chat.html          # 聊天界面
-├── skills/
-│   └── legal-expert/
-│       └── SKILL.md                # 法律专家Skill定义
-├── Dockerfile.mcp                  # MCP服务Docker镜像
-├── setup.sh                        # 快速部署脚本
-├── claude_desktop_config.json      # Claude Desktop配置
-└── README.md
+├── poco-claw-main/              # poco-claw Agent 框架
+│   ├── backend/                 # FastAPI 后端
+│   ├── frontend/                # Next.js 前端
+│   ├── executor/                # Agent 执行引擎
+│   ├── executor_manager/        # 任务调度管理
+│   ├── docker-compose.yml       # Docker 部署配置
+│   └── .env                     # 环境配置
+│
+├── legal-mcp-server/            # 法律检索 MCP 服务
+│   ├── server.py                # HTTP 服务（法规+案例检索）
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── web/
+│   └── legal-ai-chat.html       # 独立 Web 界面
+│
+├── mcp-servers/                 # MCP 服务（Claude Desktop）
+│   ├── delilegal-api/           # 得理法律 API
+│   └── doc-tools/               # 文档处理
+│
+├── src/                         # Python 源码
+│   ├── legal_search.py
+│   ├── legal_cli.py
+│   └── legal_assistant.py
+│
+└── skills/legal-expert/         # 法律专家 Skill
+    └── SKILL.md
 ```
 
-## 功能模块
+## 🚀 快速开始
 
-### 🔍 法律法规检索 (`search_law`)
-- 关键词搜索
-- 语义搜索
-- 返回相关法条
+### 方式一：Docker 部署（推荐）
 
-### 📋 案例检索 (`search_case`)
-- 关键词搜索
-- 长文本语义搜索
-- 支持筛选：
-  - 法院层级（最高/高级/中级/基层）
-  - 裁判年份
-  - 文书类型
+1. **安装 Docker Desktop**
 
-### 📝 合同审查 (`analyze_contract`)
-- 识别风险条款
-- 标注风险等级（高/中/低）
-- 提供修改建议
+2. **配置环境变量**
+   ```bash
+   cd poco-claw-main
+   # 编辑 .env 文件，填入你的 API Key
+   ```
 
-### 📄 判决书分析 (`analyze_judgment`)
-- 提取当事人信息
-- 识别争议焦点
-- 总结裁判要旨
+3. **启动服务**
+   ```bash
+   docker compose up -d
+   ```
 
-### ✍️ 法律文书生成
-| 工具 | 文书类型 |
-|------|----------|
-| `generate_complaint` | 民事起诉状 |
-| `generate_defense` | 民事答辩状 |
-| `generate_legal_opinion` | 法律意见书 |
+4. **访问界面**
+   - poco-claw 前端: http://localhost:3000
+   - 法律 MCP 服务: http://localhost:8765
 
-## 快速开始
+### 方式二：独立 Web 界面
 
-### 方式一：Claude Desktop（推荐新手）
+直接打开 `web/legal-ai-chat.html`，配置智谱 API Key 即可使用。
 
-1. **安装依赖**
-```bash
-pip install mcp httpx
-```
+### 方式三：Claude Desktop
 
-2. **配置API密钥**
+将 `claude_desktop_config.json` 复制到 Claude Desktop 配置目录。
 
-设置环境变量（推荐）：
+## 🔧 环境配置
+
+在 `poco-claw-main/.env` 中配置：
 
 ```bash
-# Linux/macOS
-export DELILEGAL_APPID="你的appid"
-export DELILEGAL_SECRET="你的secret"
+# 智谱 AI（Anthropic 兼容端点）
+ANTHROPIC_API_KEY=你的智谱API_KEY
+ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic
+DEFAULT_MODEL=claude-sonnet-4-20250514
 
-# Windows (PowerShell)
-$env:DELILEGAL_APPID="你的appid"
-$env:DELILEGAL_SECRET="你的secret"
-
-# Windows (CMD)
-set DELILEGAL_APPID=你的appid
-set DELILEGAL_SECRET=你的secret
-```
-
-或者在 `.env` 文件中配置：
-```
+# 得理法律 API
 DELILEGAL_APPID=你的appid
 DELILEGAL_SECRET=你的secret
+
+# 安全配置
+BACKEND_SECRET_KEY=your-secret-key
+INTERNAL_API_TOKEN=your-token
+CALLBACK_TOKEN=your-token
 ```
 
-3. **配置Claude Desktop**
+## 🛠️ 功能模块
 
-将 `claude_desktop_config.json` 内容复制到：
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+### 法律检索工具
 
-4. **重启Claude Desktop**
+| 工具 | 功能 | 参数 |
+|------|------|------|
+| `search_law` | 法规检索 | `query`: 关键词 |
+| `search_case` | 案例检索 | `keywords`: 关键词数组 |
 
-### 方式二：直接运行MCP服务
+### Agent 能力
 
-```bash
-cd mcp-servers/delilegal-api
-python server.py
-```
+- ✅ **任务规划**: 自动分解复杂问题
+- ✅ **工具选择**: 智能判断调用哪个工具
+- ✅ **结果整合**: 综合多源信息生成回答
+- ✅ **记忆系统**: 可启用 mem0 记忆
 
-## 使用示例
+## 📖 使用示例
 
 ### 法律咨询
 ```
 用户：上班途中发生车祸算工伤吗？
-AI：[自动检索相关法条和案例，给出专业分析]
+
+Agent 执行流程：
+1. 理解问题 → 识别为工伤法律问题
+2. 调用 search_law("工伤认定") → 检索法规
+3. 调用 search_case(["工伤", "交通事故"]) → 检索案例
+4. 整合分析 → 给出专业回答
 ```
 
 ### 合同审查
 ```
 用户：帮我审查这份租房合同
-[上传合同文件]
-AI：[分析风险条款，标注风险等级，给出修改建议]
+
+Agent 执行流程：
+1. 读取合同文件
+2. 识别风险条款
+3. 标注风险等级
+4. 提供修改建议
 ```
 
-### 文书生成
+## 🏗️ 架构
+
 ```
-用户：帮我写一份民间借贷纠纷的起诉状
-AI：[收集必要信息，生成规范起诉状]
+┌─────────────────────────────────────────────────────┐
+│                   用户界面                           │
+│  ┌──────────────┐    ┌──────────────────────────┐  │
+│  │ poco-claw    │    │  独立 Web 界面            │  │
+│  │ (localhost:3000)│    │  (legal-ai-chat.html)    │  │
+│  └──────────────┘    └──────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                  Agent 核心                          │
+│  ┌──────────────┐    ┌──────────────┐              │
+│  │ 任务规划     │ ←→ │ 工具调度     │              │
+│  └──────────────┘    └──────────────┘              │
+│  ┌──────────────┐    ┌──────────────┐              │
+│  │ 记忆系统     │    │ 结果整合     │              │
+│  └──────────────┘    └──────────────┘              │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                  MCP 工具层                          │
+│  ┌──────────────┐    ┌──────────────┐              │
+│  │ 法规检索     │    │ 案例检索     │              │
+│  │ search_law   │    │ search_case  │              │
+│  └──────────────┘    └──────────────┘              │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                  外部 API                            │
+│  ┌──────────────┐    ┌──────────────┐              │
+│  │ 智谱 AI      │    │ 得理法律 API │              │
+│  └──────────────┘    └──────────────┘              │
+└─────────────────────────────────────────────────────┘
 ```
 
-## API说明
+## 📦 Docker 服务
 
-### 得理法律API
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| frontend | 3000 | Web 前端 |
+| backend | 8000 | API 后端 |
+| executor-manager | 8001 | 任务调度 |
+| legal-mcp | 8765 | 法律检索服务 |
+| postgres | 5432 | 数据库 |
+| rustfs | 9000 | S3 存储 |
 
-| 接口 | 功能 |
-|------|------|
-| `queryListLaw` | 法规检索 |
-| `queryListCase` | 案例检索 |
+## 📝 API 说明
 
-**认证方式**：Header中添加 `appid` 和 `secret`
-
-### 请求示例
+### 法律检索 API
 
 **法规检索**：
 ```bash
-curl -X POST 'https://openapi.delilegal.com/api/qa/v3/search/queryListLaw' \
+curl -X POST http://localhost:8765/call_tool \
   -H "Content-Type: application/json" \
-  -H "appid: YOUR_APPID" \
-  -H "secret: YOUR_SECRET" \
-  -d '{
-    "pageNo": 1,
-    "pageSize": 5,
-    "sortField": "correlation",
-    "sortOrder": "desc",
-    "condition": {
-      "keywords": ["合同法"],
-      "fieldName": "title"
-    }
-  }'
+  -d '{"name": "search_law", "arguments": {"query": "工伤认定"}}'
 ```
 
 **案例检索**：
 ```bash
-curl -X POST 'https://openapi.delilegal.com/api/qa/v3/search/queryListCase' \
+curl -X POST http://localhost:8765/call_tool \
   -H "Content-Type: application/json" \
-  -H "appid: YOUR_APPID" \
-  -H "secret: YOUR_SECRET" \
-  -d '{
-    "pageNo": 1,
-    "pageSize": 5,
-    "sortField": "correlation",
-    "sortOrder": "desc",
-    "condition": {
-      "keywordArr": ["工伤"]
-    }
-  }'
+  -d '{"name": "search_case", "arguments": {"keywords": ["工伤", "赔偿"]}}'
 ```
 
-## 配置参数
+## 🔐 安全说明
 
-### 法规检索参数
+- ⚠️ 不要在代码中硬编码 API 密钥
+- ✅ 使用 `.env` 文件管理敏感配置
+- ✅ `.env` 文件已添加到 `.gitignore`
 
-| 参数 | 说明 | 可选值 |
-|------|------|--------|
-| `fieldName` | 检索方式 | `title`(关键词), `semantic`(语义) |
-| `keywords` | 搜索关键词 | 字符串数组 |
-
-### 案例检索参数
-
-| 参数 | 说明 | 可选值 |
-|------|------|--------|
-| `keywordArr` | 关键词数组 | 与`longText`二选一 |
-| `longText` | 长文本检索 | 与`keywordArr`二选一 |
-| `courtLevelArr` | 法院层级 | `0`最高,`1`高级,`2`中级,`3`基层 |
-| `caseYearStart/End` | 裁判年份区间 | 如 2020-2024 |
-| `judgementTypeArr` | 文书类型 | `30`判决书,`31`裁决书,`32`调解书 |
-| `sortField` | 排序字段 | `correlation`(相关性),`time`(时间) |
-
-## 文件清单
-
-| 文件 | 用途 |
-|------|------|
-| `src/legal_search.py` | 法律检索核心模块 |
-| `src/legal_cli.py` | 命令行工具 |
-| `src/legal_assistant.py` | 对话式助手 |
-| `mcp-servers/delilegal-api/server.py` | 得理法律MCP服务 |
-| `mcp-servers/doc-tools/server.py` | 文档处理MCP服务 |
-| `skills/legal-expert/SKILL.md` | 法律专家Skill |
-| `web/legal-ai-chat.html` | Web聊天界面 |
-| `claude_desktop_config.json` | Claude Desktop配置 |
-| `setup.sh` | 快速部署脚本 |
-
-## 免责声明
-
-本系统提供的所有法律分析、建议和文书仅供参考，不构成正式法律意见。对于具体法律问题，请咨询专业律师。
-
-## License
+## 📄 License
 
 MIT
+
+## 🙏 致谢
+
+- [poco-claw](https://github.com/poco-ai/poco-claw) - Agent 框架
+- [得理法律](https://www.delilegal.com/) - 法律数据 API
+- [智谱 AI](https://open.bigmodel.cn/) - 大模型服务
