@@ -1,95 +1,40 @@
-# 法律检索 MCP HTTP 服务
-# 提供法规检索和案例检索功能
+import os
+from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import Optional
-import os
-import json
+import uvicorn
+from fastapi import FastAPI
+from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
-app = FastAPI(title="Legal Search MCP Server")
-
-# API 配置
 DELILEGAL_BASE_URL = "https://openapi.delilegal.com/api/qa/v3/search"
 APPID = os.environ.get("DELILEGAL_APPID", "")
 SECRET = os.environ.get("DELILEGAL_SECRET", "")
 
-
-class ToolCall(BaseModel):
-    name: str
-    arguments: dict
-
-
-class MCPRequest(BaseModel):
-    method: str
-    params: Optional[dict] = None
-
-
-@app.get("/health")
-async def health():
-    """健康检查"""
-    return {"status": "ok"}
-
-
-@app.get("/tools")
-async def list_tools():
-    """列出可用工具"""
-    return {
-        "tools": [
-            {
-                "name": "search_law",
-                "description": "搜索法律法规条款。输入关键词搜索相关法律法规。",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "搜索关键词"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            },
-            {
-                "name": "search_case",
-                "description": "搜索司法案例。输入关键词搜索相关判例。",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "keywords": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "关键词数组"
-                        }
-                    },
-                    "required": ["keywords"]
-                }
-            }
+mcp = FastMCP(
+    "Legal Search MCP",
+    json_response=True,
+    transport_security=TransportSecuritySettings(
+        allowed_hosts=[
+            "host.docker.internal:*",
+            "localhost:*",
+            "127.0.0.1:*",
         ]
-    }
+    ),
+)
 
 
-@app.post("/call_tool")
-async def call_tool(request: ToolCall):
-    """执行工具调用"""
-    if request.name == "search_law":
-        return await search_law(request.arguments.get("query", ""))
-    elif request.name == "search_case":
-        return await search_case(request.arguments.get("keywords", []))
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown tool: {request.name}")
-
-
-async def search_law(query: str, page_size: int = 5) -> dict:
-    """法规检索"""
-    headers = {
+def _headers() -> dict[str, str]:
+    return {
         "Content-Type": "application/json",
         "appid": APPID,
-        "secret": SECRET
+        "secret": SECRET,
     }
 
+
+@mcp.tool()
+async def search_law(query: str, page_size: int = 5) -> dict:
+    """Search Chinese laws and regulations by keyword."""
     payload = {
         "pageNo": 1,
         "pageSize": page_size,
@@ -102,45 +47,43 @@ async def search_law(query: str, page_size: int = 5) -> dict:
             "activeYearStart": "1978-01-01",
             "activeYearEnd": "2026-01-01",
             "keywords": [query],
-            "fieldName": "semantic"
-        }
+            "fieldName": "semantic",
+        },
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
             f"{DELILEGAL_BASE_URL}/queryListLaw",
-            headers=headers,
-            json=payload
+            headers=_headers(),
+            json=payload,
         )
+        response.raise_for_status()
         data = response.json()
 
     if not data.get("success"):
-        return {"error": data.get("msg", "检索失败")}
+        return {"error": data.get("msg", "legal search failed")}
 
     results = []
     for item in data.get("body", {}).get("data", []):
-        results.append({
-            "title": item.get("title", ""),
-            "level": item.get("levelName", ""),
-            "status": item.get("timelinessName", ""),
-            "publish_date": item.get("publishDate", ""),
-            "summary": item.get("content", "")[:200] if item.get("content") else ""
-        })
+        results.append(
+            {
+                "title": item.get("title", ""),
+                "level": item.get("levelName", ""),
+                "status": item.get("timelinessName", ""),
+                "publish_date": item.get("publishDate", ""),
+                "summary": (item.get("content") or "")[:200],
+            }
+        )
 
     return {
         "total": data.get("body", {}).get("totalCount", 0),
-        "results": results
+        "results": results,
     }
 
 
-async def search_case(keywords: list, page_size: int = 5) -> dict:
-    """案例检索"""
-    headers = {
-        "Content-Type": "application/json",
-        "appid": APPID,
-        "secret": SECRET
-    }
-
+@mcp.tool()
+async def search_case(keywords: list[str], page_size: int = 5) -> dict:
+    """Search Chinese court cases by keywords."""
     payload = {
         "pageNo": 1,
         "pageSize": page_size,
@@ -152,55 +95,56 @@ async def search_case(keywords: list, page_size: int = 5) -> dict:
             "publishYearEnd": "2026-01-01",
             "activeYearStart": "1978-01-01",
             "activeYearEnd": "2026-01-01",
-            "keywordArr": keywords
-        }
+            "keywordArr": keywords,
+        },
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
             f"{DELILEGAL_BASE_URL}/queryListCase",
-            headers=headers,
-            json=payload
+            headers=_headers(),
+            json=payload,
         )
+        response.raise_for_status()
         data = response.json()
 
     if not data.get("success"):
-        return {"error": data.get("msg", "检索失败")}
+        return {"error": data.get("msg", "case search failed")}
 
     results = []
     for item in data.get("body", {}).get("data", []):
-        results.append({
-            "title": item.get("title") or item.get("caseName", ""),
-            "court": item.get("courtName", ""),
-            "date": item.get("judgeDate", ""),
-            "type": item.get("caseType", ""),
-            "summary": item.get("content", "")[:200] if item.get("content") else ""
-        })
+        results.append(
+            {
+                "title": item.get("title") or item.get("caseName", ""),
+                "court": item.get("courtName", ""),
+                "date": item.get("judgeDate", ""),
+                "type": item.get("caseType", ""),
+                "summary": (item.get("content") or "")[:200],
+            }
+        )
 
     return {
         "total": data.get("body", {}).get("totalCount", 0),
-        "results": results
+        "results": results,
     }
 
 
-# MCP 协议兼容端点
-@app.post("/mcp")
-async def mcp_endpoint(request: MCPRequest):
-    """MCP 协议兼容端点"""
-    if request.method == "tools/list":
-        return await list_tools()
-    elif request.method == "tools/call":
-        params = request.params or {}
-        call_req = ToolCall(
-            name=params.get("name", ""),
-            arguments=params.get("arguments", {})
-        )
-        result = await call_tool(call_req)
-        return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown method: {request.method}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with mcp.session_manager.run():
+        yield
+
+
+app = FastAPI(title="Legal Search MCP Server", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+app.mount("/", mcp.streamable_http_app())
 
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8765)

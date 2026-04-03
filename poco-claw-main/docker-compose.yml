@@ -30,7 +30,13 @@ services:
     ports:
       - "8765:8765"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8765/health')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -212,9 +218,9 @@ services:
 
   executor-manager:
     # Default to pulling from GHCR; override via EXECUTOR_MANAGER_IMAGE if needed.
-    image: ${EXECUTOR_MANAGER_IMAGE:-ghcr.io/poco-ai/poco-executor-manager:latest}
+    image: poco-executor-manager:local
     restart: unless-stopped
-    user: "${EXECUTOR_UID:-1000}:${EXECUTOR_GID:-1000}"
+    user: "0:0"
     depends_on:
       backend:
         condition: service_started
@@ -239,12 +245,12 @@ services:
       DELILEGAL_SECRET: ${DELILEGAL_SECRET:-}
 
       # Image used by the manager to spawn executor containers via docker.sock.
-      EXECUTOR_IMAGE: ${EXECUTOR_IMAGE:-ghcr.io/poco-ai/poco-executor:lite}
+      EXECUTOR_IMAGE: poco-executor:lite-local
       # Prefer local images first when enabled; fall back to the remote image settings below.
       EXECUTOR_PREFER_LOCAL_IMAGE: ${EXECUTOR_PREFER_LOCAL_IMAGE:-false}
       EXECUTOR_LOCAL_IMAGE: ${EXECUTOR_LOCAL_IMAGE:-}
       # Optional: executor image with desktop/browser stack (used when browser_enabled=true).
-      EXECUTOR_BROWSER_IMAGE: ${EXECUTOR_BROWSER_IMAGE:-ghcr.io/poco-ai/poco-executor:full}
+      EXECUTOR_BROWSER_IMAGE: poco-executor:full-local
       EXECUTOR_LOCAL_BROWSER_IMAGE: ${EXECUTOR_LOCAL_BROWSER_IMAGE:-}
       # Default desktop viewport for browser-enabled runs (Playwright MCP).
       POCO_BROWSER_VIEWPORT_SIZE: ${POCO_BROWSER_VIEWPORT_SIZE:-1366x768}

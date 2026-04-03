@@ -5,6 +5,27 @@ echo "=== Poco Executor Container Starting ==="
 
 export DISPLAY="${DISPLAY:-:1}"
 
+prepare_workspace_state() {
+  local workspace_root="${WORKSPACE_PATH:-/workspace}"
+
+  if [ ! -d "${workspace_root}" ]; then
+    return
+  fi
+
+  echo "Preparing workspace state under ${workspace_root}..."
+
+  mkdir -p "${workspace_root}/.claude_data" "${workspace_root}/inputs"
+
+  if [ ! -e "${workspace_root}/.poco-task-context.json" ]; then
+    printf '{}' > "${workspace_root}/.poco-task-context.json"
+  fi
+
+  chmod 0777 "${workspace_root}/.claude_data" "${workspace_root}/inputs" || true
+  chmod 0666 "${workspace_root}/.poco-task-context.json" || true
+}
+
+prepare_workspace_state
+
 enable_sandbox_services="${ENABLE_SANDBOX_SERVICES:-auto}"
 supervisor_conf="${SUPERVISOR_CONF:-/etc/supervisor/conf.d/supervisord.conf}"
 

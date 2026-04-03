@@ -187,6 +187,7 @@ class ContainerPool:
         container = self.docker_client.containers.run(
             image=image,
             name=container_name,
+            user="0:0",
             environment=environment,
             volumes={workspace_volume: {"bind": "/workspace", "mode": "rw"}},
             ports=ports,
@@ -231,6 +232,7 @@ class ContainerPool:
         executor_url = f"http://{published_host}:{host_port}"
 
         self._wait_for_service_ready(executor_url)
+        self._prime_workspace_context_file(container)
 
         logger.info(
             f"Container {container_id} started for session {session_id} on port {host_port}"
@@ -317,6 +319,41 @@ class ContainerPool:
                 extra={"image": image, "error": str(exc)},
             )
             return False
+
+    def _prime_workspace_context_file(self, container: "Container") -> None:
+        """Create the task context file before the executor handles the first task.
+
+        On some Docker Desktop bind mounts, the executor's initial async write to the
+        workspace root can fail even though later writes succeed. Pre-creating the file
+        avoids that startup failure path.
+        """
+        try:
+            exit_code, output = container.exec_run(
+                [
+                    "sh",
+                    "-lc",
+                    "touch /workspace/.poco-task-context.json && chmod 666 /workspace/.poco-task-context.json",
+                ]
+            )
+            if exit_code != 0:
+                logger.warning(
+                    "executor_workspace_prime_failed",
+                    extra={
+                        "container_name": getattr(container, "name", None),
+                        "exit_code": exit_code,
+                        "output": output.decode("utf-8", errors="replace")
+                        if isinstance(output, (bytes, bytearray))
+                        else str(output),
+                    },
+                )
+        except Exception as exc:
+            logger.warning(
+                "executor_workspace_prime_error",
+                extra={
+                    "container_name": getattr(container, "name", None),
+                    "error": str(exc),
+                },
+            )
 
     @staticmethod
     def _extract_host_port(container: "Container") -> str | None:
