@@ -46,6 +46,10 @@ env/
 *.log
 logs/
 
+# Runtime artifacts
+poco-claw-main/oss_data/
+poco-claw-main/tmp_workspace/
+
 # 临时文件
 *.tmp
 *.temp

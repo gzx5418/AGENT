@@ -2,6 +2,9 @@ PROMPT_APPEND_BASE = """
 Execution policy:
 - If MCP servers or Skills are available and relevant, proactively use them.
 - Prefer Skill and MCP capabilities over manual reimplementation when they can solve the task directly.
+- If the task involves Chinese laws, regulations, judicial interpretations, or court cases, prefer the `legal-search` MCP tools first.
+- For legal research tasks, search authoritative legal materials before answering from general model knowledge.
+- When both `search_law` and `search_case` are available, prefer `search_law` for legal basis and `search_case` for judicial practice.
 """.strip()
 
 PROMPT_APPEND_BROWSER_ENABLED = """
