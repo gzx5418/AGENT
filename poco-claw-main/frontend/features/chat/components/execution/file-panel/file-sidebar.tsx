@@ -1,0 +1,430 @@
+"use client";
+
+import * as React from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Folder,
+  FileText,
+  FileCode,
+  FileImage,
+  File as FileIcon,
+  ChevronRight,
+  ChevronDown,
+  Download,
+  PackagePlus,
+  Settings,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { FileNode } from "@/features/chat/types";
+import { apiClient, API_ENDPOINTS } from "@/services/api-client";
+import { toast } from "sonner";
+import { PanelHeaderAction } from "@/components/shared/panel-header";
+import { useT } from "@/lib/i18n/client";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface FileSidebarProps {
+  files: FileNode[];
+  onFileSelect: (file: FileNode) => void;
+  selectedFile?: FileNode;
+  sessionId?: string;
+  embedded?: boolean;
+  onPackageSkill?: (node: FileNode) => void;
+  onDownloadNode?: (node: FileNode) => void;
+}
+
+function collectSkillFolderPaths(nodes: FileNode[]): Set<string> {
+  const skillFolderPaths = new Set<string>();
+
+  const visit = (items: FileNode[]) => {
+    for (const item of items) {
+      if (item.type !== "folder") {
+        continue;
+      }
+
+      const children = item.children ?? [];
+      if (
+        children.some(
+          (child) => child.type === "file" && child.name === "SKILL.md",
+        )
+      ) {
+        skillFolderPaths.add(item.path);
+      }
+
+      if (children.length > 0) {
+        visit(children);
+      }
+    }
+  };
+
+  visit(nodes);
+  return skillFolderPaths;
+}
+
+const isSameOriginUrl = (url: string) => {
+  try {
+    return (
+      new URL(url, window.location.origin).origin === window.location.origin
+    );
+  } catch {
+    return false;
+  }
+};
+
+const triggerDownload = (url: string, filename: string) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+export const downloadFileFromUrl = async (url: string, filename: string) => {
+  const absoluteUrl = new URL(url, window.location.origin).toString();
+  try {
+    const response = await fetch(absoluteUrl, {
+      credentials: isSameOriginUrl(absoluteUrl) ? "include" : "omit",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    triggerDownload(blobUrl, filename);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } catch (error) {
+    console.warn(
+      "[Artifacts] Failed to download as blob, fallback to direct URL",
+      error,
+    );
+    triggerDownload(absoluteUrl, filename);
+  }
+};
+
+function FileTreeItem({
+  node,
+  onSelect,
+  selectedId,
+  level = 0,
+  onPackageSkill,
+  onDownloadNode,
+  canDownloadFolder,
+  skillFolderPaths,
+}: {
+  node: FileNode;
+  onSelect: (file: FileNode) => void;
+  selectedId?: string;
+  level?: number;
+  onPackageSkill?: (node: FileNode) => void;
+  onDownloadNode?: (node: FileNode) => void;
+  canDownloadFolder: boolean;
+  skillFolderPaths: ReadonlySet<string>;
+}) {
+  const [isExpanded, setIsExpanded] = React.useState(level === 0);
+  const [isActionsOpen, setIsActionsOpen] = React.useState(false);
+  const isMobile = useIsMobile();
+  const { t } = useT("translation");
+  const canDownloadNode =
+    Boolean(onDownloadNode) &&
+    ((node.type === "file" && Boolean(node.url)) ||
+      (node.type === "folder" && canDownloadFolder));
+  const canPackageAsSkill =
+    node.type === "folder" &&
+    skillFolderPaths.has(node.path) &&
+    Boolean(onPackageSkill);
+  const hasActions = canDownloadNode || canPackageAsSkill;
+
+  // Check if this node or any of its children is the selected one
+  const containsSelected = React.useMemo(() => {
+    if (!selectedId) return false;
+    const check = (n: FileNode): boolean => {
+      if (n.id === selectedId) return true;
+      if (n.children) {
+        return n.children.some((child) => check(child));
+      }
+      return false;
+    };
+    return check(node);
+  }, [node, selectedId]);
+
+  // Auto-expand if selection is found within subtree
+  React.useEffect(() => {
+    if (containsSelected && node.type === "folder") {
+      setIsExpanded(true);
+    }
+  }, [containsSelected, node.type]);
+
+  const getFileIcon = (name: string, type: string, className?: string) => {
+    if (type === "folder") {
+      return <Folder className={cn("size-4", className)} />;
+    }
+
+    const ext = name.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "md":
+      case "txt":
+      case "pdf":
+      case "docx":
+      case "doc":
+        return <FileText className={cn("size-4", className)} />;
+      case "xlsx":
+      case "xls":
+      case "csv":
+        return <FileText className={cn("size-4", className)} />;
+      case "html":
+      case "css":
+      case "ts":
+      case "tsx":
+      case "js":
+      case "jsx":
+      case "json":
+      case "excalidraw":
+      case "drawio":
+      case "py":
+        return <FileCode className={cn("size-4", className)} />;
+      case "jpg":
+      case "jpeg":
+      case "png":
+      case "gif":
+      case "svg":
+        return <FileImage className={cn("size-4", className)} />;
+      default:
+        return <FileIcon className={cn("size-4", className)} />;
+    }
+  };
+
+  const handleClick = () => {
+    if (node.type === "folder") {
+      setIsExpanded(!isExpanded);
+    } else {
+      onSelect(node);
+    }
+  };
+  // Keep indentation inside the row box so nested nodes never exceed sidebar width.
+  const paddingStartRem = 0.5 + Math.min(level, 12) * 0.5;
+  const iconColorClass =
+    selectedId === node.id
+      ? "text-sidebar-accent-foreground"
+      : "text-sidebar-foreground/70";
+
+  const renderNodeIcon = () => {
+    if (node.type !== "folder") {
+      return getFileIcon(node.name, node.type, iconColorClass);
+    }
+
+    const folderIcon = getFileIcon(node.name, node.type, iconColorClass);
+    const chevronIcon = isExpanded ? (
+      <ChevronDown className={cn("size-4", iconColorClass)} />
+    ) : (
+      <ChevronRight className={cn("size-4", iconColorClass)} />
+    );
+
+    if (isMobile) {
+      return isExpanded ? folderIcon : chevronIcon;
+    }
+
+    return (
+      <span className="relative inline-flex items-center justify-center">
+        <span className="transition-opacity duration-150 group-hover/item:opacity-0">
+          {folderIcon}
+        </span>
+        <span className="absolute inset-0 transition-opacity duration-150 opacity-0 group-hover/item:opacity-100">
+          {chevronIcon}
+        </span>
+      </span>
+    );
+  };
+  const nodeIcon = renderNodeIcon();
+
+  return (
+    <div className="w-full min-w-0 max-w-full basis-full overflow-hidden">
+      <div
+        className={cn(
+          "group/item relative box-border flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-md py-1.5 transition-colors cursor-pointer",
+          selectedId === node.id
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+        )}
+        style={{
+          paddingInlineStart: `${paddingStartRem}rem`,
+          paddingInlineEnd: "0.5rem",
+        }}
+        onClick={handleClick}
+      >
+        <span className="shrink-0">{nodeIcon}</span>
+        <span
+          className="block w-0 flex-1 min-w-0 max-w-full truncate text-sm"
+          title={node.name}
+        >
+          {node.name}
+        </span>
+        {hasActions ? (
+          <DropdownMenu open={isActionsOpen} onOpenChange={setIsActionsOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/60 transition-opacity hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:opacity-100 focus-visible:pointer-events-auto",
+                  isActionsOpen
+                    ? "opacity-100 pointer-events-auto"
+                    : "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto group-focus-within/item:opacity-100 group-focus-within/item:pointer-events-auto",
+                )}
+                aria-label={t("fileSidebar.actions")}
+                title={t("fileSidebar.actions")}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <Settings className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={4}>
+              {canDownloadNode ? (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDownloadNode?.(node);
+                  }}
+                >
+                  <Download className="mr-2 size-4" />
+                  {t("fileSidebar.download")}
+                </DropdownMenuItem>
+              ) : null}
+              {canPackageAsSkill ? (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onPackageSkill?.(node);
+                  }}
+                >
+                  <PackagePlus className="mr-2 size-4" />
+                  {t("fileSidebar.packageAsSkill")}
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </div>
+      {node.type === "folder" && isExpanded && node.children && (
+        <div className="w-full min-w-0 max-w-full basis-full overflow-hidden">
+          {node.children.map((child) => (
+            <FileTreeItem
+              key={child.id}
+              node={child}
+              onSelect={onSelect}
+              selectedId={selectedId}
+              level={level + 1}
+              onPackageSkill={onPackageSkill}
+              onDownloadNode={onDownloadNode}
+              canDownloadFolder={canDownloadFolder}
+              skillFolderPaths={skillFolderPaths}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function FileSidebar({
+  files,
+  onFileSelect,
+  selectedFile,
+  sessionId,
+  embedded = false,
+  onPackageSkill,
+  onDownloadNode,
+}: FileSidebarProps) {
+  const { t } = useT("translation");
+  const canDownloadArchive = Boolean(sessionId) && files.length > 0;
+  const canDownloadFolder = Boolean(sessionId);
+  const [skillFolderPaths, setSkillFolderPaths] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSkillFolderPaths(collectSkillFolderPaths(files));
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [files]);
+
+  const handleDownload = async () => {
+    if (!sessionId || !canDownloadArchive) return;
+    try {
+      const response = await apiClient.get<{
+        url?: string | null;
+        filename?: string | null;
+      }>(API_ENDPOINTS.sessionWorkspaceArchive(sessionId));
+
+      if (response.url) {
+        const filename = response.filename || `workspace-${sessionId}.zip`;
+        await downloadFileFromUrl(response.url, filename);
+        toast.success(t("fileSidebar.downloadStarted"));
+      } else {
+        toast.error(t("fileSidebar.archiveNotAvailable"));
+      }
+    } catch (error) {
+      console.error("[Artifacts] Failed to download workspace archive", error);
+      toast.error(t("fileSidebar.downloadFailed"));
+    }
+  };
+
+  return (
+    <aside
+      className={cn(
+        "flex h-full w-full min-h-0 min-w-0 max-w-full flex-col overflow-hidden text-sidebar-foreground",
+        embedded
+          ? "border-0 bg-transparent"
+          : "border-l border-border/60 bg-sidebar/60",
+      )}
+    >
+      <div className="flex w-full min-w-0 items-center justify-between overflow-hidden px-3 py-2">
+        <span className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/70">
+          {t("fileSidebar.title")}
+        </span>
+        {sessionId && (
+          <PanelHeaderAction
+            onClick={handleDownload}
+            disabled={!canDownloadArchive}
+            aria-label={t("fileSidebar.downloadAll")}
+          >
+            <Download className="size-4" />
+          </PanelHeaderAction>
+        )}
+      </div>
+      <ScrollArea className="h-full w-full flex-1 min-h-0 max-w-full [&_[data-slot=scroll-area-scrollbar]]:hidden [&_[data-slot=scroll-area-viewport]]:w-full [&_[data-slot=scroll-area-viewport]]:overflow-x-hidden [&_[data-slot=scroll-area-viewport]]:scrollbar-hide">
+        <div className="w-full min-w-0 max-w-full space-y-1 overflow-hidden px-2 py-2">
+          {files.length === 0 ? (
+            <p className="text-xs text-sidebar-foreground/60 px-2 py-1">
+              {t("fileSidebar.noFiles")}
+            </p>
+          ) : (
+            files.map((file) => (
+              <FileTreeItem
+                key={file.id}
+                node={file}
+                onSelect={onFileSelect}
+                selectedId={selectedFile?.id}
+                onPackageSkill={onPackageSkill}
+                onDownloadNode={onDownloadNode}
+                canDownloadFolder={canDownloadFolder}
+                skillFolderPaths={skillFolderPaths}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </aside>
+  );
+}
